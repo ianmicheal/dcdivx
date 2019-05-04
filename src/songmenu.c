@@ -15,8 +15,10 @@
 #include "divx.h"
 
 /* Takes care of the song menu */
+static int jlast=0;
 
 int play_divx(char* );
+int shuffle=0;
 /* Song menu choices */
 typedef struct {
 	char	fn[256];
@@ -30,6 +32,58 @@ static int selected = 0, top = 0;
 
 static int framecnt = 0;
 static float throb = 0.2f, dthrob = 0.01f;
+/* optimal random number function. */
+unsigned long seed=0;
+#define RNDC 1013904223
+#define RNDM 1164525
+
+int rand() {
+	seed = seed * RNDM + RNDC;
+	return seed;
+}
+
+int randnum(int limit) { return (rand() & 0x7fffffff) % limit; }
+
+void Shuffle()
+{
+	entry temp[100];
+	int PlayCount[100];
+
+	int NextFile;
+	int n=0;
+	for (n=0;n<=num_entries;n++)
+	{
+		PlayCount[n]=0;
+	}
+	n=0;
+//	srand(GetTickCount());
+	if (seed==0) seed=jiffies;
+	while(n<num_entries&&(entries[n].size<=0))
+	{
+		strcpy(temp[n].fn,entries[n].fn);
+		temp[n].size=entries[n].size;
+		PlayCount[n]=1;
+		n++;
+	}
+	while(n<num_entries)
+	{
+		do{
+		NextFile=randnum(num_entries); //((double)rand()/(double)RAND_MAX)*(((double)num_entries));
+		printf("Radnom=%d Num=%d count=%d\r\n",NextFile,num_entries,n);
+		}while(PlayCount[NextFile]);
+		strcpy(temp[n].fn,entries[NextFile].fn);
+		temp[n].size=entries[NextFile].size;
+		PlayCount[NextFile]=1;
+		n++;
+	}
+	for (n=0;n<num_entries;n++)
+	{
+		strcpy(entries[n].fn,temp[n].fn);
+		entries[NextFile].size=temp[n].size;
+
+	}
+
+}
 
 static void load_song_list() {
 	file_t d;
@@ -75,22 +129,27 @@ static void load_song_list() {
 		}
 	}
 	fs_close(d);
+	if (shuffle) Shuffle();
 }
 
 /* Draws the song listing */
 static void draw_listing() {
 	float y = 110.0f;
 	int i, esel;
-
+	char temp[250];
 	/* Draw all the song titles */	
 	for (i=0; i<10 && (top+i)<num_entries; i++) {
+		strcpy(temp,entries[top+i].fn);
+		if (strlen(temp)>25) temp[25]=0;
 		draw_poly_strf(60.0f, y, 100.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-			entries[top+i].fn);
+			temp);
 		if (entries[top+i].size >= 0) {
-			draw_poly_strf(60.0f+250.0f, y, 80.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-				"%d bytes", entries[top+i].size);
+			draw_poly_strf(60.0f+360.0f, y, 30.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+				"%d", entries[top+i].size/1000);
+			draw_poly_strf(60.0f+450.0f, y, 20.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+				"KB");
 		} else {
-			draw_poly_strf(60.0f+250.0f, y, 80.0f, 1.0f, 1.0f, 1.0f, 1.0f, "<DIR>");
+			draw_poly_strf(60.0f+430.0f, y, 50.0f, 1.0f, 1.0f, 1.0f, 1.0f, "<DIR>");
 		}
 		y += 24.0f;
 	}
@@ -107,15 +166,24 @@ void check_controller() {
 	char filen[256];
 	static uint8 mcont = 0;
 	static int up_moved = 0, down_moved = 0;
+	int j;
+	if (jlast==0) jlast=jiffies;
 	cont_cond_t cond;
+	j=jiffies-jlast;
+	if (j<3000)
+	{
+		
+		if (!mcont) {
 
-	if (!mcont) {
-
-		mcont = maple_first_controller();
-		if (!mcont) { return; }
+			mcont = maple_first_controller();
+			if (!mcont) { return; }
+		}
+		if (cont_get_cond(mcont, &cond)) { return; }
 	}
-	if (cont_get_cond(mcont, &cond)) { return; }
-
+	else
+	{
+		cond.buttons=0xFFFF;
+	}
 	if (!(cond.buttons & CONT_DPAD_UP)) {
 		if ((framecnt - up_moved) > 10) {
 			if (selected > 0) {
@@ -126,6 +194,7 @@ void check_controller() {
 			}
 			up_moved = framecnt;
 		}
+		jlast=jiffies;
 	}
 	if (!(cond.buttons & CONT_DPAD_DOWN)) {
 		if ((framecnt - down_moved) > 10) {
@@ -137,27 +206,26 @@ void check_controller() {
 			}
 			down_moved = framecnt;
 		}
+		jlast=jiffies;
 	}
-	if (cond.ltrig > 0) {
-		if ((framecnt - up_moved) > 10) {
-			selected -= 10;
-			if (selected < 0) selected = 0;
-			if (selected < top) top = selected;
-			up_moved = framecnt;
-		}
+	if (cond.rtrig > 0)
+	{
+		shuffle=1;
+		load_song_list();
+		load_queued = 0;
+		jlast=jiffies;
 	}
-	if (cond.rtrig > 0) {
-		if ((framecnt - down_moved) > 10) {
-			selected += 10;
-			if (selected > (num_entries - 1))
-				selected = num_entries - 1;
-			if (selected >= (top+10))
-				top = selected;
-			down_moved = framecnt;
-		}
+	if (cond.ltrig > 0)
+	{
+		shuffle=0;
+		load_song_list();
+		load_queued = 0;
+		jlast=jiffies;
 	}
 	if (!(cond.buttons & CONT_A)) 
 	{
+		poly_hdr_t poly;
+		int i=0;
 		if (!strcmp(entries[selected].fn, "Error!")) 
 		{
 			num_entries = 0;
@@ -165,61 +233,72 @@ void check_controller() {
 		}
 		else if (entries[selected].size >= 0) 
 		{
-				int bNext=1;
-				ta_commit_eol();
+			int bNext=1;
+			ta_poly_hdr_col(&poly, TA_TRANSLUCENT);
+			ta_commit_poly_hdr(&poly);
+			ta_commit_eol();
+			/* Finish the frame *******************************/
+			ta_finish_frame();
+			while (bNext)
+			{
+				int ret;
+				int i=0;
+				strcpy(filen,curdir);
+				strcat(filen,"/");
+				strcat(filen,entries[selected].fn);
 
-				/* Finish the frame *******************************/
-				ta_finish_frame();
-				while (bNext)
+				for (i=0;i<3;i++)
 				{
-					int ret;
-					strcpy(filen,curdir);
-					strcat(filen,"/");
-					strcat(filen,entries[selected].fn);
+					ta_begin_render();
+					loading_render();
 
-					printf("Next=%d\r\n",selected);
-     				ret=play_divx(filen);
-					if (ret==2)
-					{
-						bNext=1;
-						selected++;
-						printf("Next=%d\r\n",selected);
-						while(entries[selected].size<=0||(selected>num_entries))
-						{
-							if (selected>num_entries) selected=0;
-							if (entries[selected].size<=0) selected++;
-						}
-					}
-					else if (ret==3)
-					{
-						bNext=1;
-						selected--;
-						if (selected<0) selected=num_entries-1;
-						printf("Next=%d\r\n",selected);
-						while(entries[selected].size<=0||(selected<0))
-						{
-							if (selected<0) selected=num_entries-1;
-							if (entries[selected].size<=0) selected--;
-						}
-					}
-					else
-					{
-						bNext=0;
-					}
-				
+					ta_commit_eol();
+					ta_poly_hdr_col(&poly, TA_TRANSLUCENT);
+					ta_commit_poly_hdr(&poly);
+					ta_commit_eol();
+					ta_finish_frame();
 				}
-				ta_begin_render();
+				ret=play_divx(filen);
+				if (ret==2)
+				{
+					bNext=1;
+					selected++;
+					printf("Next=%d\r\n",selected);
+					while(entries[selected].size<=0||(selected>num_entries))
+					{
+						if (selected>num_entries) selected=0;
+						if (entries[selected].size<=0) selected++;
+					}
+				}
+				else if (ret==3)
+				{
+					bNext=1;
+					selected--;
+					if (selected<0) selected=num_entries-1;
+					printf("Next=%d\r\n",selected);
+					while(entries[selected].size<=0||(selected<0))
+					{
+						if (selected<0) selected=num_entries-1;
+						if (entries[selected].size<=0) selected--;
+					}
+				}
+				else
+				{
+					bNext=0;
+				}
+			
+			}
+			ta_begin_render();
 
-				/* Opaque list *************************************/
-				bkg_render();
+			/* Opaque list *************************************/
+			bkg_render();
 
-				/* End of opaque list */
-				ta_commit_eol();
+			/* End of opaque list */
+			ta_commit_eol();
 
 		}
-		else 
+		else if (!(cond.buttons & CONT_A))
 		{
-			int i=0;
 			if (!strcmp(entries[selected].fn, "<..>")) {
 				int i;
 				for (i=strlen(curdir); i>0; i--) {
@@ -237,35 +316,58 @@ void check_controller() {
 			selected = top = num_entries = 0;
 			printf("current directory is now '%s'\n", curdir);
 			load_song_list();
-			while (i < 900000) 
-			{
-				i++;
-			}
 
 		}
+		i=1;
+		while (i) 
+		{
+			int n=0;
+			i=0;
+			if (cont_get_cond(mcont, &cond)) i=0;
+			else if (!(cond.buttons & CONT_A)) i=1;
+			while (n<900000)
+			{
+				n++;
+			}
+		}
+		jlast=jiffies;
+
 	}
-	if (!(cond.buttons & CONT_START)) 
+	if (!(cond.buttons & CONT_START)||(j>3000)) 
 	{
 		int n;
 		int bStop=0;
- 		//mouse_render();
+ 		poly_hdr_t poly;
+		//mouse_render();
 
 		/* End of translucent list */
 		ta_commit_eol();
 
 		/* Finish the frame *******************************/
 		ta_finish_frame();
-		for (n=0;n<num_entries&&(!bStop);n++)
+		for (n=selected;n<num_entries&&(!bStop);n++)
 		{
 			if (entries[n].size >= 0) 
 			{
+				int i;
 				strcpy(filen,curdir);
 				strcat(filen,"/");
 				strcat(filen,entries[n].fn);
+				for (i=0;i<3;i++)
+				{
+					ta_begin_render();
+					loading_render();
 
+					ta_commit_eol();
+					ta_poly_hdr_col(&poly, TA_TRANSLUCENT);
+					ta_commit_poly_hdr(&poly);
+					ta_commit_eol();
+					ta_finish_frame();
+				}
 				bStop=(play_divx(filen)==-2);
 			}
 		}
+		selected=0;
 //		ta_begin_render();
 
 		/* Opaque list *************************************/
@@ -273,7 +375,7 @@ void check_controller() {
 
 		/* End of opaque list */
 //		ta_commit_eol();
-
+		jlast=jiffies;
 	}
 }
 
@@ -295,6 +397,7 @@ void song_menu_render() {
 			draw_poly_strf(60.0f, 110.0f, 100.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 				"Scanning Directory...");
 			load_queued++;
+			jlast=jiffies;
 			return;
 		} else {
 			load_song_list();
@@ -303,7 +406,11 @@ void song_menu_render() {
 	}
 	else
 	{
-		if (last==0) bkg_setup();
+		if (last==0)
+		{
+			bkg_setup();
+			loading_setup();
+		}
 		last=1;
 	}
 	/* Draw the song listing */

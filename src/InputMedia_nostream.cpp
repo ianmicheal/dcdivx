@@ -45,13 +45,13 @@ enum {
 
 
 	file_t file;
-	int filesize;
+	long filesize;
 	/*
  	 * HTTP/FTP stuff 
 	 */
 
 
-	int     lastReadPos;
+	unsigned long     lastReadPos;
 
 
 
@@ -92,12 +92,19 @@ void InputMediaClose()
 int InputMediaRead(char *data, unsigned int size)
 {
 		
-
-	if ((size=fs_read(file,(void *) data,size)))
-	{
-		::lastReadPos+=size;
-		return size;
-	}
+	unsigned int t=size;
+//	size=0;
+//	do
+//	{
+		if ((t=fs_read(file,(void *) data,size)))
+		{
+			::lastReadPos+=t;
+			return t;
+		}
+//	}
+//	while (size!=t&&(::lastReadPos<filesize));
+//	return size;
+		printf("failid in read=%d\r\n",::lastReadPos);
 	return 0;
 }
 
@@ -109,6 +116,8 @@ int InputMediaSeek(int size, unsigned int method)
 			{
 			case INPUT_SEEK_SET:
 				::lastReadPos = size;
+				if (::lastReadPos<0||(::lastReadPos>filesize))
+					printf("fucked=%f\r\n",size);
 			//	SetFilePointer(::file, size,NULL, FILE_BEGIN);
 				fs_seek(::file,size,SEEK_SET);
 				return size;
@@ -121,7 +130,10 @@ int InputMediaSeek(int size, unsigned int method)
 					return ::lastReadPos;
 				}
 				else {
+					int t=::lastReadPos;
 					::lastReadPos += size;
+					if (::lastReadPos<0||(::lastReadPos>filesize))
+						printf("fucked=%d old=%d new =%d\r\n",size,t,::lastReadPos);
 					//SetFilePointer(::file, size, NULL,FILE_CURRENT);
 					fs_seek(::file,size,SEEK_CUR);
 					return ::lastReadPos;

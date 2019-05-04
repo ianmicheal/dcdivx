@@ -137,8 +137,8 @@ int getvophdr()
 	mp4_hdr.vop_coded = getbits1();
 	if (mp4_hdr.vop_coded == 0) 
 	{
-		next_start_code();
-		return 1;
+		//next_start_code();
+		return 0;
 	}  
 
 	if (mp4_hdr.prediction_type == P_VOP)
@@ -167,7 +167,7 @@ int getvophdr()
 // Purpose: look nbit forward for an alignement
 int bytealigned(int nbit) 
 {
-	return (((ld->bitcnt + nbit) % 8) == 0);
+	return (((ld->bitcnt + nbit) << 29) == 0);
 }
 
 /**/

@@ -20,6 +20,83 @@ static int get_drv_stat(void *param) { MAKE_SYSCALL(return, param, 0, 4); }
 static void drv_reset() { MAKE_SYSCALL(/**/, 0, 0, 9); }
 static void drv_main() { MAKE_SYSCALL(/**/, 0, 0, 2); }
 
+
+/********************************************************************************/
+//no you're not dreaming these functions are GARBAGE, but they serve the very 
+//improtant role of padding out the binary to a near even 1KB, which gets us up
+//to 5% performance boost.  Add as many copies as necessary to just break the next
+//1KB boundry for the binary.  I need to find a better way of doing this though.
+/********************************************************************************/
+int check_start2() {
+	static uint8 mcont = 0;
+	cont_cond_t cond;
+
+	if (!mcont) {
+		mcont = maple_first_controller();
+		if (!mcont) {
+			printf("No controllers attached\n");
+			return 1;
+		}
+	}
+
+	if (cont_get_cond(mcont, &cond)) {
+		printf("Error getting controller status\n");
+		return 1;
+	}
+		
+	if (!(cond.buttons & CONT_START)) {
+		printf("Pressed start\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+int check_start3() {
+	static uint8 mcont = 0;
+	cont_cond_t cond;
+
+	if (!mcont) {
+		mcont = maple_first_controller();
+		if (!mcont) {
+			printf("No controllers attached\n");
+			return 1;
+		}
+	}
+
+	if (cont_get_cond(mcont, &cond)) {
+		printf("Error getting controller status\n");
+		return 1;
+	}
+		
+	if (!(cond.buttons & CONT_START)) {
+		printf("Pressed start\n");
+		return 1;
+	}
+
+	return 0;
+}
+int check_start4() {
+	static uint8 mcont = 0;
+	cont_cond_t cond;
+
+	if (!mcont) {
+		mcont = maple_first_controller();
+		if (!mcont) {
+			printf("No controllers attached\n");
+			return 1;
+		}
+	}
+
+
+	return 0;
+}
+
+/********************************************************************************/
+//end of padding
+/********************************************************************************/
+
+
 int check_start() {
 	static uint8 mcont = 0;
 	cont_cond_t cond;
@@ -45,6 +122,8 @@ int check_start() {
 
 	return 0;
 }
+
+
 
 void blit_font_texture() {
 	poly_hdr_t poly;
@@ -97,6 +176,7 @@ int main(int argc, char **argv) {
 	/* Setup the mouse/font texture */
 	setup_util_texture();
 	bkg_setup();
+	loading_setup();
 	/* Setup background display */
 
 	/* Find a mouse if there is one */

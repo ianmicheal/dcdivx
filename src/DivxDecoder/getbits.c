@@ -58,7 +58,7 @@ void flushbits (int n)
 	ld->bitcnt += n; 
 	if (ld->bitcnt >= 8) { 
 		ld->rdptr += ld->bitcnt >> 3; 
-		ld->bitcnt = ld->bitcnt % 8;	
+		ld->bitcnt = (ld->bitcnt&(0x00000007));// % 8;	
 	} 
 } 
 
@@ -71,7 +71,7 @@ unsigned int getbits (int n)
 	ld->bitcnt += n; 
 	if (ld->bitcnt >= 8) { 
 		ld->rdptr += (ld->bitcnt)>>3; 
-		ld->bitcnt = ld->bitcnt % 8; 
+		ld->bitcnt = (ld->bitcnt&(0x00000007));// % 8;	
 	}
 	return l;
 } 
@@ -83,7 +83,7 @@ unsigned int getbits1()
 	ld->bitcnt += 1; 
 	if (ld->bitcnt >= 8) { 
 		ld->rdptr += (ld->bitcnt)>>3; 
-		ld->bitcnt = ld->bitcnt % 8; 
+		ld->bitcnt = (ld->bitcnt&(0x00000007));// % 8;	
 	} 
 	return l; 
 } 

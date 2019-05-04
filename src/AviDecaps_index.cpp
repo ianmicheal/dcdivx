@@ -362,9 +362,9 @@ int AVIDecaps_FillHeader(int getIndex)
 	InputMediaClose();
 	int fsize=InputMediaOpen(thisvid.m_lpFilename,0,0,2000000,CacheSize);
 	if (!fsize) return 0;
-	int time=(((double)thisvid.video_frames)/((double)thisvid.fps));
-	int abytes=(int)(time*32000)/8;
-	thisvid.threshhold=((double)((fsize-abytes)/time)/thisvid.fps)*(4);
+	//int time=(((double)thisvid.video_frames)/((double)thisvid.fps));
+	//int abytes=(int)(time*32000)/8;
+	//thisvid.threshhold=((double)((fsize-abytes)/time)/thisvid.fps)*(4);
 	//Sleep(1000);
 	InputMediaSeek(thisvid.movi_start, 
 		INPUT_SEEK_SET);
@@ -455,7 +455,7 @@ int AVIDecaps_NextVideoFrame(char *buffer, int drop)
 int AVIDecaps_ReadAudio(char *audbuf, int bytes)
 {
 	int nr, left = 0, todo;
-
+	int tempb=bytes;
 
    nr = 0; 
 
@@ -498,7 +498,7 @@ int AVIDecaps_ReadAudio(char *audbuf, int bytes)
    }
 
 
-
+	if (!nr) printf("read failed pos=%d bytes=%d\r\n",InputMediaSeek(0,INPUT_SEEK_CUR),tempb);
    return nr;
 }
 
@@ -654,6 +654,18 @@ int AVIDecaps_Close()
 	thisvid.idx=0;
 	printf("Closed reader\r\n");
 	return 1;
+}
+
+void InitializeReaderAVI(reader* rd)
+{
+	rd->READER_Open=AVIDecaps_Open;
+	rd->READER_ReadAudio=AVIDecaps_ReadAudio;
+	rd->READER_NextVideoFrame=AVIDecaps_NextVideoFrame;
+	rd->READER_Seek=AVIDecaps_Seek;
+	rd->READER_ReSeekAudio=AVIDecaps_ReSeekAudio;
+	rd->READER_GetProgress=AVIDecaps_GetProgress;
+	rd->READER_Close=AVIDecaps_Close;
+
 }
 
 

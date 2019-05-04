@@ -20,8 +20,7 @@
 #include "kos.h"
 #include "mp4_decoder.h"
 #include "global.h"
-#include "yuv2rgb.h"
-#include "decore.h"
+#include "../decore.h"
 // FUNCTION DECLARATIONS
 
 extern int macroblock();
@@ -174,9 +173,4 @@ void PictureDisplay(unsigned char *bmp, int render_flag,int Extra)
 	p->linesize[0]=coded_picture_width;
 	p->linesize[1]=coded_picture_width>>1;
 	p->linesize[2]=coded_picture_width>>1;
-#ifdef ARM
-	p->last_picture[0]=frame_for[0];
-	p->last_picture[1]=frame_for[1];
-	p->last_picture[2]=frame_for[2];
-#endif
 }

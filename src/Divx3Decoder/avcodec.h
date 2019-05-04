@@ -3,7 +3,7 @@ extern "C" {
 #endif 
 
 #include "common.h"
-#include "decore.h"
+#include "../decore.h"
 enum CodecID {
     CODEC_ID_MP2,
     CODEC_ID_MSMPEG4,

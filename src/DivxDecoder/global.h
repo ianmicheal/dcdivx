@@ -21,7 +21,7 @@
 /* GLOBAL is defined in only one file */
 
 #include <stdio.h>
-#include "portab.h"
+#include "../portab.h"
 
 #ifndef GLOBAL
 #define EXTERN extern

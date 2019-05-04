@@ -15,19 +15,19 @@
  **************************************************************************************/
 
 
-#include "global1.h"
+#include "MADDecoder/global1.h"
 #include "kos.h"
-#include "fixed.h"
+#include "MADDecoder/fixed.h"
 #include "decore.h"
 #include "avidecaps.h"
 #include "yuv2rgb.h"
 #include <malloc.h>
 #include "math.h"
-#include "frame.h"
-#include "synth.h"
+#include "MADDecoder/frame.h"
+#include "MADDecoder/synth.h"
 
-#include "msmpeg.h"
-#include "avcodec.h"
+#include "Divx3Decoder/msmpeg.h"
+#include "Divx3Decoder/avcodec.h"
 #include "sndstream.h"
   struct mad_stream stream;
   struct mad_frame frame;
@@ -63,6 +63,8 @@ int jaudio;
 int jmath;
 int FastForward=false;
 int pos;
+int totMsTime=0;
+int baseTick=0;
 // msmpeg.cpp : Defines the entry point for the DLL application.
 //
 int BUFF_SIZE=0;
@@ -358,7 +360,8 @@ long decBegin(int First)
 	if (First==0)
 		decode((long) NULL, DEC_OPT_INIT, &dec_param, NULL);
 
-	decore_setoutput((long) NULL, dec_param.output_format);
+	//decore_setoutput((long) NULL, dec_param.output_format);
+	convert_yuv = yuv2rgb_565;
 	
 	return 0;
 }
@@ -378,7 +381,7 @@ void StopFastForward()
 	FastForward=!FastForward;
 	tot=vidinfo->video_frames-vidinfo->video_pos;
 	//nCurrentFrame=0;
-	if (vidinfo->audio_bytes)
+	if (totAudio)
 	{
 		AVPicture avpict;
 		int t=vidinfo->audio_bytes;
@@ -389,7 +392,7 @@ void StopFastForward()
 		writepos=0;
 		basesynchpos=tbasesynchpos=0;
 		nextsynchpos=tnextsynchpos=0;
-		nCurrentFrame=0;
+		nCurrentFrame=1;
 		nShouldbe=(int64)((int64)t*(int64)vidinfo->video_frames/vidinfo->audio_bytes)+1;
 		printf("shouldbe=%d %d\r\n",nShouldbe,vidinfo->video_pos);
 		while(vidinfo->video_pos<nShouldbe)
@@ -406,6 +409,13 @@ void StopFastForward()
 		stream_start(Freq, ch-1);
 		printf("resume %d %d\r\n",vidinfo->video_pos,totAudio);
 	}
+	else
+	{
+		nCurrentFrame=1;
+		baseTick=jiffies*10;
+		totMsTime=((double)(tot*1000))/vidinfo->fps;
+	}
+
 }
 
 void PlayFastForward()
@@ -413,7 +423,7 @@ void PlayFastForward()
 	AVPicture avpict;
 	int render=1;
 	if (!tot) return;
-	if (!bPause)
+	if (!bPause&&(totAudio))
 	{
 		stream_pause();
 		//bPause=!bPause;
@@ -426,7 +436,7 @@ void PlayFastForward()
 	decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
 	RD.READER_NextVideoFrame(vid_temp,0);
 	render=decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
-	if (vidinfo->currentchunk.pos<(vidinfo->currentframe.pos-800000) )
+	if (totAudio &&(vidinfo->currentchunk.pos<(vidinfo->currentframe.pos-800000)) )
 	{
 		printf("keepup %d %d %d\r\n", vidinfo->currentchunk.pos,vidinfo->currentframe.pos, vidinfo->video_pos);
 		RD.READER_ReadAudio((char *)mp3_buffer,MP3_BUFFER_SIZE);
@@ -448,14 +458,16 @@ void check_event()
 	static uint8 mcont = 0;
 	static int pressed=0;
 	cont_cond_t cond;
-
 	if (!mcont) {
 
 		mcont = maple_first_controller();
 		if (!mcont) { return; }
 	}
-	if (cont_get_cond(mcont, &cond)) { return; }
-
+	if (cont_get_cond(mcont, &cond)) 
+	{
+		printf("here\r\n");
+		return; 
+	}
 	if (!(cond.buttons & CONT_Y)) 
 	{
 		bEnd=-2;
@@ -463,7 +475,23 @@ void check_event()
 	if ((!(cond.buttons & CONT_A))&&(!pressed)) 
 	{
 		int i=0;
-		stream_pause();
+		if (bPause&&(!totAudio))
+		{
+			baseTick=jiffies*10;
+			tot=tot-nCurrentFrame;
+			nCurrentFrame=1;
+			totMsTime=((double)(tot*1000))/vidinfo->fps;
+			bPause=false;
+		}
+		else if (!totAudio)
+		{
+			bPause=true;
+			baseTick=0;
+		}
+		else
+		{
+			stream_pause();
+		}
 		//bPause=!bPause;
 		pressed=1;
 	}
@@ -479,12 +507,16 @@ void check_event()
 	{
 		bEnd=3;
 	}
-	if ((!(cond.buttons & CONT_DPAD_RIGHT)))
+	if ((!(cond.buttons & CONT_DPAD_RIGHT))&&(vidinfo->video_frames>0))
 	{
 		if (!FastForward)
 		{
-			stream_stop();
-			stream_shutdown();
+			if (totAudio)
+			{
+				stream_stop();
+				stream_shutdown();
+			}
+			//printf("FFWD\r\n");
 			FastForward=1;
 		}
 		else
@@ -509,12 +541,28 @@ void PlayFrame( )
 	{
 		return;
 	}
-	float fpos=GetPos();
-	int diff=(nextsynchpos-basesynchpos);
-	temp=(int) (fpos*(float)diff);
-	temp+=basesynchpos;
-	temp+=diff>>1;
-	nShouldbe=(int64)((int64)temp*(int64)tot/totAudio)+1;
+	if (totAudio)
+	{
+		float fpos=GetPos();
+		int diff=(nextsynchpos-basesynchpos);
+		temp=(int) (fpos*(float)diff);
+		temp+=basesynchpos;
+		temp+=diff>>1;
+		nShouldbe=(int64)((int64)temp*(int64)tot/totAudio)+1;
+	}
+	else
+	{
+		if (!bPause)
+		{
+			nShouldbe=(((int64)tot*(int64)(jiffies*10-baseTick))/totMsTime)+1;
+			//nShouldbe=nCurrentFrame;
+		}
+		else
+		{
+			nShouldbe=0;
+		}
+
+	}
 	int FrameDiff=nCurrentFrame-nShouldbe;
 	if (FrameDiff<2&&(FrameDiff>-30)) 
 	{
@@ -761,10 +809,12 @@ for (i=0;i<1200;i++)
 	printf(vidinfo->compressor);
 	printf("\r\n");
 	totAudio=vidinfo->audio_bytes; //Freq*ch*2*(tot/vidinfo->fps);//vidinfo->audio_bytes;
+	totMsTime=((double)(tot*1000))/vidinfo->fps;
+	baseTick=jiffies*10;
 	printf("total audio bytes=%d",totAudio);
 	decode=decore;
 	decode_frame=decore_frame;
-	if (strstr(vidinfo->compressor,"div3")||(strstr(vidinfo->compressor,"DIV3"))||(strstr(vidinfo->compressor,"DIV4"))||(strstr(vidinfo->compressor,"div4")))
+	if (strstr(vidinfo->compressor,"div3")||(strstr(vidinfo->compressor,"DIV3"))||(strstr(vidinfo->compressor,"DIV4"))||(strstr(vidinfo->compressor,"div4"))||(strstr(vidinfo->compressor,"mp43"))||(strstr(vidinfo->compressor,"MP43")))
 	{
 		decode=decore_Div3;
 		decode_frame=decore_frame_Div3;
@@ -791,15 +841,28 @@ for (i=0;i<1200;i++)
 
 	Finished=0;
 	DoneDecode=0;
-	stream_init(get_data);
-	thd_create(audio,NULL);
-	Decode(0);
-	stream_stop();
-	stream_shutdown();
+//	totAudio=0;
+//	vidinfo->audio_bytes=0;
+	if (totAudio)
+	{
+		stream_init(get_data);
+		thd_create(audio,NULL);
+		Decode(0);
+		stream_stop();
+		stream_shutdown();
 
-	timer_spin_sleep(1000);
+		timer_spin_sleep(1000);
+		Exit();
+	}
+	else
+	{
+		while (!bEnd&&(vidinfo->video_pos<(vidinfo->video_frames-1)))
+		{
+			PlayFrame();
+			if ((!(jiffies % 5))&&(nCurrentFrame>100)) check_event();
+		}
+	}
 	printf("played %d frames decode complete drop=%d\r\n",nCurrentFrame,Drop);
-	Exit();
 	decEnd();
 	RD.READER_Close();
 	malloc_stats();

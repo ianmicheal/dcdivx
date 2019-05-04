@@ -1,7 +1,7 @@
 # Basic KallistiOS Makefile for Projects without ROMDISK
 
 TARGET = divx.elf
-OBJS = common.o utils.o h263dec.o mpegvideo.o h263.o dsputil.o msmpeg4.o motion_est.o jrevdct.o MP3Reader.o divx_player.o texture.o bkg.o 3dutils.o songmenu.o sndstream.o romdisk.o decore.o getbits.o video.o mp4_decoder.o mp4_header.o mp4_mblock.o mp4_picture.o mp4_predict.o mp4_recon.o mp4_vld.o yuv2rgb.o AviDecaps.o InputMedia.o bit.o fixed.o frame.o huffman.o layer3.o stream.o synth.o divx.o 
+OBJS = loading.o Divx3Decoder/common.o Divx3Decoder/utils.o Divx3Decoder/h263dec.o Divx3Decoder/mpegvideo.o Divx3Decoder/h263.o Divx3Decoder/dsputil.o Divx3Decoder/msmpeg4.o Divx3Decoder/motion_est.o Divx3Decoder/jrevdct.o MP3Reader.o divx_player.o texture.o bkg.o 3dutils.o songmenu.o sndstream.o romdisk.o video.o DivxDecoder/decore.o DivxDecoder/mp4_decoder.o DivxDecoder/mp4_picture.o DivxDecoder/mp4_header.o DivxDecoder/mp4_mblock.o  DivxDecoder/getbits.o DivxDecoder/mp4_predict.o DivxDecoder/mp4_recon.o DivxDecoder/mp4_vld.o yuv2rgb.o AviDecaps.o InputMedia.o MADDecoder/frame.o MADDecoder/stream.o MADDecoder/synth.o MADDecoder/huffman.o MADDecoder/layer3.o MADDecoder/bit.o MADDecoder/fixed.o divx.o 
 
 all: rm-elf $(TARGET)
 

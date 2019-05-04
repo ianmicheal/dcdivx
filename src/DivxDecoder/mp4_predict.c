@@ -185,41 +185,6 @@ void rescue_predict()
 	}
 	// left
 	if (! _IsIntra(mb_ypos, mb_xpos-1)) {
-		#ifdef MIPS
-			#ifndef MIPS32
-			__asm("addi		$8,$0,1024;"
-				  "sw		$8,0($4);"
-				  "sw		$0,4($4);"
-				  "sdr		$0,8($4);"
-				  "sw		$8,0($5);"
-				  "sw		$0,4($5);"
-				  "sdr		$0,8($5);"
-				  "sw		$8,0($6);"
-				  "sw		$0,4($6);"
-				  "sdr		$0,8($6);"
-				  "sw		$8,0($7);"
-				  "sw		$0,4($7);"
-				  "sdr		$0,8($7);",&coeff_pred->ac_dc_left_lum[2*mb_ypos+1][2*mb_xpos][0],&coeff_pred->ac_dc_left_lum[2*mb_ypos+2][2*mb_xpos][0],&coeff_pred->ac_dc_left_chr[0][mb_ypos+1][mb_xpos][0],&coeff_pred->ac_dc_left_chr[1][mb_ypos+1][mb_xpos][0]);
-			#else
-				__asm("addi		$8,$0,1024;"
-				  "sw		$8,0($4);"
-				  "sw		$0,4($4);"
-				  "sw		$0,8($4);"
-				  "sw		$0,12($4);"
-				  "sw		$8,0($5);"
-				  "sw		$0,4($5);"
-				  "sw		$0,8($5);"
-				  "sw		$0,12($5);"
-				  "sw		$8,0($6);"
-				  "sw		$0,4($6);"
-				  "sw		$0,8($6);"
-				  "sw		$0,12($6);"
-				  "sw		$8,0($7);"
-				  "sw		$0,4($7);"
-				  "sw		$0,8($7);"
-				  "sw		$0,12($7);",&coeff_pred->ac_dc_left_lum[2*mb_ypos+1][2*mb_xpos][0],&coeff_pred->ac_dc_left_lum[2*mb_ypos+2][2*mb_xpos][0],&coeff_pred->ac_dc_left_chr[0][mb_ypos+1][mb_xpos][0],&coeff_pred->ac_dc_left_chr[1][mb_ypos+1][mb_xpos][0]);
-			#endif
-		#else
 			// rescue -B- DC values
 			coeff_pred->ac_dc_left_lum[2*mb_ypos+1][2*mb_xpos][0] = 1024;
 			coeff_pred->ac_dc_left_lum[2*mb_ypos+2][2*mb_xpos][0] = 1024;
@@ -232,7 +197,6 @@ void rescue_predict()
 				coeff_pred->ac_dc_left_chr[0][mb_ypos+1][mb_xpos][i] = 0;
 				coeff_pred->ac_dc_left_chr[1][mb_ypos+1][mb_xpos][i] = 0;
 			}
-		#endif
 	}
 	// top
 	if (! _IsIntra(mb_ypos-1, mb_xpos)) {

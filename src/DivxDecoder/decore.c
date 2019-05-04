@@ -21,8 +21,8 @@
 
 #include "mp4_decoder.h"
 #include "global.h"
-#include "yuv2rgb.h"
-#include "decore.h"
+//#include "yuv2rgb.h"
+#include "../decore.h"
 #include "malloc.h"
 
 /**/
@@ -81,13 +81,13 @@ int decore_init(int hor_size, int ver_size, unsigned long color_depth, int outpu
 	mp4_hdr.width = hor_size;
 	mp4_hdr.height = ver_size;
 	mp4_hdr.quant_precision = 5;
-	mp4_hdr.bits_per_pixel = 8;
+	//mp4_hdr.bits_per_pixel = 8;
 	flag_firstpicture=1;
 	if (flag_firstpicture == 1) {
 		mp4_hdr.time_increment_resolution = 0;
 		flag_firstpicture = 0;
 	}
-	mp4_hdr.picnum = 0;
+//	mp4_hdr.picnum = 0;
     mp4_hdr.mb_xsize = ( mp4_hdr.width + 15 ) / 16; 
 	mp4_hdr.mb_ysize = ( mp4_hdr.height + 15 ) / 16;
 	mp4_hdr.mba_size = mp4_hdr.mb_xsize * mp4_hdr.mb_ysize;
@@ -100,7 +100,7 @@ int decore_init(int hor_size, int ver_size, unsigned long color_depth, int outpu
 	// init decoder
 
 	initdecoder();
-	decore_setoutput(color_depth, output_format);
+	//decore_setoutput(color_depth, output_format);
 	return 1;
 }
 
@@ -113,7 +113,7 @@ int decore_frame(unsigned char *stream, int length, unsigned char *bmp, int rend
 	getvolhdr();
 	if (!getvophdr()) return 0;; // read vop header
 	get_mp4picture (bmp, render_flag,Extra); // decode vop
-	mp4_hdr.picnum++;
+//	mp4_hdr.picnum++;
 	return 1;
 }
 
@@ -131,25 +131,5 @@ int decore_release()
 
 int decore_setoutput(unsigned long color_depth, int output_format)
 {
-	switch (output_format)
-	{
-		case RGB565:
-			convert_yuv = yuv2rgb_565;
-			break;
-		case RGB565R:
-			//convert_yuv = yuv2rgb_565R;
-			break;
-		case RGB565RZ:
-			//convert_yuv = yuv2rgb_565RZ;
-			break;
-		case RGB565Z:
-			//convert_yuv = yuv2rgb_565Z;
-			break;
-		#ifdef MIPS
-		case RGB565ZPP:
-			//convert_yuv = yuv2rgb_565ZPP;
-			break;
-		#endif
-	}
 	return 1;
 }

@@ -27,6 +27,8 @@ void play_s3m(char *fn);
 /* bkg.c */
 void bkg_setup();
 void bkg_render();
+void loading_setup();
+void loading_render();
 
 /* texture.c */
 extern uint32 util_texture;
