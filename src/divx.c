@@ -61,6 +61,8 @@ int jdraw;
 int jmp3;
 int jaudio;
 int jmath;
+int FastForward=false;
+int pos;
 // msmpeg.cpp : Defines the entry point for the DLL application.
 //
 int BUFF_SIZE=0;
@@ -70,6 +72,7 @@ AVCodecContext codec_context, *c = &codec_context;
 int got_picture, len;
 AVPicture picture;
 
+static void* get_data(int req_size,int curbuffer) ;
 
 
 extern unsigned char *decore_stream;
@@ -112,11 +115,11 @@ int decore_Div3(unsigned long handle, unsigned long dec_opt,
 
 /***/
 
-void decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra)
+int decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra)
 {
     avcodec_decode_video(c, &picture, &got_picture, 
                                stream, 100000,bmp,render_flag,Extra);
-
+	return 1;
 }
 
 
@@ -152,7 +155,7 @@ void divxdeinit()
 
 
 int (*decode) (unsigned long handle, unsigned long dec_opt,void *param1, void *param2);
-void (*decode_frame)(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra);
+int (*decode_frame)(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra);
 
 
 cont_cond_t cond;
@@ -369,6 +372,77 @@ char abuff[68000];
 int DoneDecode=0;
 int Finished=0;
 
+
+void StopFastForward()
+{
+	FastForward=!FastForward;
+	tot=vidinfo->video_frames-vidinfo->video_pos;
+	//nCurrentFrame=0;
+	if (vidinfo->audio_bytes)
+	{
+		AVPicture avpict;
+		int t=vidinfo->audio_bytes;
+		totAudio=RD.READER_ReSeekAudio();
+		t-=totAudio;
+		written=0;
+		readpos=0;
+		writepos=0;
+		basesynchpos=tbasesynchpos=0;
+		nextsynchpos=tnextsynchpos=0;
+		nCurrentFrame=0;
+		nShouldbe=(int64)((int64)t*(int64)vidinfo->video_frames/vidinfo->audio_bytes)+1;
+		printf("shouldbe=%d %d\r\n",nShouldbe,vidinfo->video_pos);
+		while(vidinfo->video_pos<nShouldbe)
+		{
+			RD.READER_NextVideoFrame(vid_temp,0);
+			decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
+		}
+		Exit();
+		Init(0,0);
+		//while (written<131072*ch*2) thd_sleep(100);
+//		stream_pause();
+		stream_init(get_data);
+		while (written<131072*ch*2) thd_sleep(100);
+		stream_start(Freq, ch-1);
+		printf("resume %d %d\r\n",vidinfo->video_pos,totAudio);
+	}
+}
+
+void PlayFastForward()
+{
+	AVPicture avpict;
+	int render=1;
+	if (!tot) return;
+	if (!bPause)
+	{
+		stream_pause();
+		//bPause=!bPause;
+		//thd_sleep(1000);
+	}
+	nShouldbe=0;
+	RD.READER_NextVideoFrame(vid_temp,0);
+	decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
+	RD.READER_NextVideoFrame(vid_temp,0);
+	decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
+	RD.READER_NextVideoFrame(vid_temp,0);
+	render=decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
+	if (vidinfo->currentchunk.pos<(vidinfo->currentframe.pos-800000) )
+	{
+		printf("keepup %d %d %d\r\n", vidinfo->currentchunk.pos,vidinfo->currentframe.pos, vidinfo->video_pos);
+		RD.READER_ReadAudio((char *)mp3_buffer,MP3_BUFFER_SIZE);
+		//pos+=MP3_BUFFER_SIZE;
+		//printf("keepup %d %d\r\n", vidinfo->currentchunk.pos,vidinfo->currentframe.pos);
+	}
+	if (render)
+	{
+		convert_yuv(avpict.data[0], avpict.linesize[0],
+		avpict.data[1], avpict.data[2], avpict.linesize[1],
+		(unsigned char*)outputbuffer, g_nWidth,g_nHeight,512,0);
+		outputbuffer=(char*)txset();
+	}
+	nCurrentFrame+=3;
+}
+
 void check_event()
 {
 	static uint8 mcont = 0;
@@ -390,6 +464,7 @@ void check_event()
 	{
 		int i=0;
 		stream_pause();
+		//bPause=!bPause;
 		pressed=1;
 	}
 	if (((cond.buttons & CONT_A))&&(pressed)) 
@@ -404,9 +479,27 @@ void check_event()
 	{
 		bEnd=3;
 	}
+	if ((!(cond.buttons & CONT_DPAD_RIGHT)))
+	{
+		if (!FastForward)
+		{
+			stream_stop();
+			stream_shutdown();
+			FastForward=1;
+		}
+		else
+		{
+			StopFastForward();
+			//bPause=!bPause;
+		}
+	}
 
 }
 float GetPos();
+
+
+
+
 
 void PlayFrame( )
 {
@@ -416,21 +509,23 @@ void PlayFrame( )
 	{
 		return;
 	}
-	float pos=GetPos();
+	float fpos=GetPos();
 	int diff=(nextsynchpos-basesynchpos);
-	temp=(int) (pos*(float)diff);
+	temp=(int) (fpos*(float)diff);
 	temp+=basesynchpos;
 	temp+=diff>>1;
-	nShouldbe=(int64)((int64)temp*(int64)tot/vidinfo->audio_bytes)+1;
+	nShouldbe=(int64)((int64)temp*(int64)tot/totAudio)+1;
 	int FrameDiff=nCurrentFrame-nShouldbe;
 	if (FrameDiff<2&&(FrameDiff>-30)) 
 	{
 		RD.READER_NextVideoFrame(vid_temp,0);
-		decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0);
-		convert_yuv(avpict.data[0], avpict.linesize[0],
-			avpict.data[1], avpict.data[2], avpict.linesize[1],
-			(unsigned char*)outputbuffer, g_nWidth,g_nHeight,512,0);
-		outputbuffer=(char*)txset();
+		if (decode_frame((unsigned char*)vid_temp, 0,( unsigned char *)&avpict, 1, 0))
+		{
+			convert_yuv(avpict.data[0], avpict.linesize[0],
+				avpict.data[1], avpict.data[2], avpict.linesize[1],
+				(unsigned char*)outputbuffer, g_nWidth,g_nHeight,512,0);
+			outputbuffer=(char*)txset();
+		}
 		nCurrentFrame++;
 	}
 	else if (FrameDiff<0)
@@ -444,7 +539,9 @@ void PlayFrame( )
 	}
 	else
 	{
+		if (FastForward) PlayFastForward();
 		ReadAhead();
+		//printf("waiting %d %d\r\n",nShouldbe,pos);
 	}
 
 }
@@ -517,7 +614,6 @@ void Decode(void *v)
 {
 	char buffer[4800];
 	int temp;
-	int pos;
 	int totalwritten=0;
 	do 
 	{	
@@ -530,8 +626,10 @@ void Decode(void *v)
 		if (written>131072*ch) PlayFrame();
 		ReadAhead();
 		int nb_read=0;
+		//printf("before %d\r\n",vidinfo->currentchunk.pos);
 		nb_read=RD.READER_ReadAudio((char *)mp3_buffer+status,MP3_BUFFER_SIZE-status);
-
+		//printf("after %d\r\n",vidinfo->currentchunk.pos);
+		//printf("read one\r\n");
 		if (!nb_read)
 		{
 			printf("Done\r\n");
@@ -539,13 +637,13 @@ void Decode(void *v)
 			continue;
 		}
 		do{
-			if (written>131072*ch) PlayFrame();
+			if (written>131072*ch||(FastForward)) PlayFrame();
 			if (bEnd) 
 			{
 				DoneDecode=1;
 				return;
 			}
-		}while(written>=1000000);
+		}while(written>=1000000||(FastForward));
 
 
 		status=DecompressMp3((unsigned char*) mp3_buffer,nb_read+status,buffer,4800,&played,&pos) ; 
@@ -605,6 +703,7 @@ void Decode(void *v)
 				}
 				else
 				{
+					if (FastForward) PlayFrame();
 					status = 0;
 				}
 			}while ((!status)&&(!bEnd));
@@ -627,7 +726,7 @@ void decEnd()
 
 int play_divx(char *filename)
 {
-
+pos=0;	
  basesynchpos=tbasesynchpos=0;
  nextsynchpos=tnextsynchpos=0;
  int i;
@@ -661,6 +760,8 @@ for (i=0;i<1200;i++)
 	printf("codec:");
 	printf(vidinfo->compressor);
 	printf("\r\n");
+	totAudio=vidinfo->audio_bytes; //Freq*ch*2*(tot/vidinfo->fps);//vidinfo->audio_bytes;
+	printf("total audio bytes=%d",totAudio);
 	decode=decore;
 	decode_frame=decore_frame;
 	if (strstr(vidinfo->compressor,"div3")||(strstr(vidinfo->compressor,"DIV3"))||(strstr(vidinfo->compressor,"DIV4"))||(strstr(vidinfo->compressor,"div4")))
@@ -686,7 +787,6 @@ for (i=0;i<1200;i++)
 	GetHeaderInfo((unsigned char*)mp3_buffer,MP3_BUFFER_SIZE-1,&Freq,&ch,&br);
 	memmove(mp3_buffer+1,mp3_buffer,MP3_BUFFER_SIZE-1);
 	status=MP3_BUFFER_SIZE;
-	totAudio=Freq*ch*2*(tot/vidinfo->fps);//vidinfo->audio_bytes;
 	BUFF_SIZE=Freq>22050?2304*ch:1152*ch;
 
 	Finished=0;

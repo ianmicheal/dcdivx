@@ -93,7 +93,7 @@ typedef struct _DEC_SET_
 // the prototype of the decore() - main decore engine entrance
 int decore_setoutput(unsigned long color_depth, int output_format);
 
-void decore_frame(unsigned char *stream, int length, unsigned char *bmp,int flag, int Extra);
+int decore_frame(unsigned char *stream, int length, unsigned char *bmp,int flag, int Extra);
 int decore_setoutput(unsigned long color_depth, int output_format);
 
 int decore(

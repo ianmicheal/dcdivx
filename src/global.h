@@ -137,8 +137,8 @@ const unsigned char roundtab[16]
 EXTERN int juice_flag;
 EXTERN mp4_header mp4_hdr;
 
-EXTERN short MV[32][32][4][2];  
-EXTERN char modemap[32][32];
+EXTERN int MV[32][32][4][2];  
+EXTERN short modemap[32][32];
 
 
 EXTERN struct _base
@@ -157,12 +157,11 @@ EXTERN struct _base
 EXTERN struct _ac_dc
 {
 	int predict_dir;
+	int ac_dc_left_lum[64][64][8];
+	int ac_dc_top_lum[64][64][7];
 
-	short ac_dc_left_lum[64][64][8];
-	short ac_dc_top_lum[64][64][7];
-
-	short ac_dc_left_chr[2][32][32][8];
-	short ac_dc_top_chr[2][32][32][7];
+	int ac_dc_left_chr[2][32][32][8];
+	int ac_dc_top_chr[2][32][32][7];
 
 
 } ac_dc, *coeff_pred;

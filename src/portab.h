@@ -14,6 +14,6 @@
 #define uint32_t unsigned int 
 #define int64_t __int64
 #define uint64_t unsigned __int64
-#define idct_block_t short
+#define idct_block_t int
 int g_Extra;
 #endif // _PORTAB_H_

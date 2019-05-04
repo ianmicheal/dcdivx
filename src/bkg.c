@@ -20,15 +20,27 @@
 
 /* This module will manage the spiffy background effects */
 
-static int ang = 0;
 static uint32 chktexture = 0;
-static float horizon = 340.0f;
 
 /* Make a nice (now familiar =) XOR pattern texture */
 void bkg_setup() {
+    file_t infile;                /* source file */
 
-    chktexture = ta_txr_allocate(1024*1024*2);
-    jpeg_to_texture("/rd/background.jpg", chktexture, 640,1);
+    if (!chktexture)
+	{
+		chktexture = ta_txr_allocate(1024*1024*2);
+		jpeg_to_texture("/rd/background.jpg", chktexture, 640,1);
+	}
+    if ((infile = fs_open("/cd/background.jpg", O_RDONLY)) == 0) {
+	    if ((infile = fs_open("/cd/backgr~1.jpg", O_RDONLY)) == 0) {
+			return;
+		}
+		fs_close(infile);
+		jpeg_to_texture("/cd/backgr~1.jpg", chktexture, 640,1);
+		return;
+    }
+	fs_close(infile);
+    jpeg_to_texture("/cd/background.jpg", chktexture, 640,1);
 //    png_to_texture("/rd/background.png", chktexture, PNG_NO_ALPHA);
 }
 
@@ -45,28 +57,28 @@ void bkg_render() {
     vert.flags = TA_VERTEX_NORMAL;
     
     vert.x = 1;
-    vert.y = 1;
+    vert.y = 16;
     vert.z = 1;
     vert.u = 0.0;
     vert.v = 0.0;
     ta_commit_vertex(&vert, sizeof(vert));
     
     vert.x = 1024;
-    vert.y = 1;
+    vert.y = 16;
     vert.z = 1;
     vert.u = 1.0;
     vert.v = 0.0;
     ta_commit_vertex(&vert, sizeof(vert));
     
     vert.x = 1;
-    vert.y = 1024;
+    vert.y = 980;
     vert.z = 1;
     vert.u = 0.0;
     vert.v = 1.0;
     ta_commit_vertex(&vert, sizeof(vert));
     
     vert.x = 1024;
-    vert.y = 1024;
+    vert.y = 980;
     vert.z = 1;
     vert.u = 1.0;
     vert.v = 1.0;

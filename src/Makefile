@@ -7,6 +7,8 @@ all: rm-elf $(TARGET)
 
 include $(KOS_BASE)/Makefile.rules
 
+KOS_LOCAL_CFLAGS = -I$(KOS_BASE)/addons/zlib
+
 clean:
 	-rm -f $(TARGET) $(OBJS)
 	-rm -f romdisk.o romdisk.img
@@ -16,8 +18,8 @@ rm-elf:
 
 $(TARGET): $(OBJS) 
 
-	$(KOS_CC) $(KOS_CFLAGS) -O0 $(KOS_LDFLAGS) -o $(TARGET) $(KOS_START) \
-		$(OBJS) $(OBJEXTRA) -L$(KOS_BASE)/lib -ldcutils -lkallisti -lm -lgcc
+	$(KOS_CC) $(KOS_CFLAGS) -O2 $(KOS_LDFLAGS) -o $(TARGET) $(KOS_START) \
+		$(OBJS) $(OBJEXTRA) -L$(KOS_BASE)/lib -ljpeg -lz -ldcutils -lkallisti -lgcc -lm 
 
 	$(KOS_OBJCOPY) -O binary $(TARGET) divx.bin
 

@@ -162,8 +162,8 @@ int AVIDecaps_FillHeader(int getIndex)
 			else if(strncmp(data, "movi", 4) == 0)
 			{
 				thisvid.movi_start = InputMediaSeek(0, INPUT_SEEK_CUR);
-				break;
-				//InputMediaSeek(n, INPUT_SEEK_CUR);
+				//break;
+				InputMediaSeek(n, INPUT_SEEK_CUR);
 			}
 			else
 			{
@@ -171,28 +171,32 @@ int AVIDecaps_FillHeader(int getIndex)
 				//break;
 			}
 		}
-/*		else if(strncmp(data,"idx1",4) == 0)
+		else if(strncmp(data,"idx1",4) == 0)
 		{
-
-			
-			//MessageBox(NULL, "Found idx1", "", MB_OK);
-
-			thisvid.n_idx = thisvid.max_idx = n/16;
-			if (thisvid.idx) free(thisvid.idx);
-			thisvid.idx = (char((*)[16]) ) malloc(n);
-			
-			if(thisvid.idx == NULL) { 
-				
-				return 0;
-			}
-			
+			thisvid.audio_bytes=0;
 			unsigned long read;
-
-			if( (read = InputMediaRead((char *) thisvid.idx, n)) != n ) {
-				
-				break;
+			thisvid.n_idx = thisvid.max_idx = n/16;
+			for (i=0;i<(thisvid.n_idx/1000)+1;i++)
+			{
+				char temp[16000];
+				int toread=16000;
+				int i2;
+				if (i==(thisvid.n_idx/1000)) 
+					toread=(thisvid.n_idx%1000)*16;
+				if( (read = InputMediaRead((char *) temp, toread)) != toread) {
+					
+					break;
+				}
+				for (i2=0;i2<read/16;i2++)
+				{
+					if(strncmp(temp+(16*i2)+2, "wb", 2) == 0)
+					{
+						thisvid.audio_bytes += str2ulong(temp+(16*i2)+12);												
+					}
+				}
 			}
-		}*/
+
+		}
 		else {
 		  
 			InputMediaSeek(n, INPUT_SEEK_CUR);
@@ -258,7 +262,7 @@ int AVIDecaps_FillHeader(int getIndex)
 			}
 			else if (strncmp (hdrl_data + i, "auds", 4) == 0 && ! auds_strh_seen)
 			{
-				thisvid.audio_bytes = str2ulong(hdrl_data + i + 32);//AVIDecaps_SampleSize();
+				//thisvid.audio_bytes = str2ulong(hdrl_data + i + 32);//AVIDecaps_SampleSize();
 				thisvid.audio_strn = num_stream;
 				
 				auds_strh_seen = 1;
@@ -323,7 +327,7 @@ int AVIDecaps_FillHeader(int getIndex)
 	thisvid.audio_tag[2] = 'w';
 	thisvid.audio_tag[3] = 'b';
 	
-	InputMediaSeek(thisvid.movi_start, INPUT_SEEK_SET);
+	//InputMediaSeek(thisvid.movi_start, INPUT_SEEK_SET);
 	thisvid.currentchunk.pos=thisvid.movi_start;
 	thisvid.currentchunk.len=0;
 	thisvid.currentframe.pos=thisvid.movi_start;
@@ -332,9 +336,12 @@ int AVIDecaps_FillHeader(int getIndex)
      * reposition the file 
      *
      */
+	//InputMediaSeek(0, 
+	//	INPUT_SEEK_SET);
 
-	//InputMediaClose();
+	InputMediaClose();
 	//InputMediaOpen(thisvid.m_lpFilename,INPUT_OPEN_BINARY,thisvid.m_type,2000000);
+	InputMediaOpen(thisvid.m_lpFilename, 0, 0,2000000,16);
 	InputMediaSeek(thisvid.movi_start, 
 		INPUT_SEEK_SET);
 	
@@ -584,7 +591,7 @@ int AVIDecaps_ReadAudio(char *audbuf, int bytes)
 		//	ReleaseMutex(thisvid.hIOMutex);
 		//	return nr;
 		// }
-         thisvid.audio_posc++;
+         //thisvid.audio_posc++;
          thisvid.audio_posb = 0;
 		 GetNextChunkInfo();
 		 if (!thisvid.currentchunk.len)
@@ -653,16 +660,18 @@ int AVIDecaps_ReSeekAudio()
 	double ratio;
 	char temp[512];
 	int nShouldbe;
-	  nShouldbe=0;
+//	  nShouldbe=0;
+	  nShouldbe=(abytes_read*(int64)thisvid.video_frames)/thisvid.audio_bytes+1;
 	  while(nShouldbe<thisvid.video_pos)
 	  {
 		  AVIDecaps_ReadAudio(temp,512);
-		  nShouldbe=(abytes_read*(uint64)thisvid.video_frames)/thisvid.audio_bytes+1;
+		  nShouldbe=(abytes_read*(int64)thisvid.video_frames)/thisvid.audio_bytes+1;
 	  }
 
 
     return thisvid.audio_bytes-abytes_read;
 }
+
 
 double AVIDecaps_GetProgress()
 {

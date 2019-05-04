@@ -77,18 +77,24 @@ int getvolhdr()
 		}
 
 		flushbits(1); // quant type
-
+		//code=getbits(1);
 		if (mp4_hdr.visual_object_layer_verid/*ident*/ != 1) {
 			flushbits(1);
 		} 
 
-		flushbits(3);
-			
-		mp4_hdr.scalability = getbits1();
+		flushbits(4);
+//		code=getbits(1);
+//		if (mp4_hdr.visual_object_layer_verid/*ident*/ != 1) {
+//			code=getbits(1);
+//			//flushbits(3);
+//			code=getbits(1);
+//		} 
 
-		if (showbits(32) == USER_DATA_START_CODE) {
-			exit(104);
-		}
+		//mp4_hdr.scalability = getbits1();
+
+//		if (showbits(32) == USER_DATA_START_CODE) {
+//			exit(104);
+//		}
   	return 1;
   }
   
@@ -99,26 +105,35 @@ int getvolhdr()
 
 int getvophdr()
 {
+	//int code=0;
 	next_start_code();
-	if(getbits(32) != (int) VOP_START_CODE)
+	while (showbits(32) != (int) VOP_START_CODE)
 	{
+		flushbits(8);
+		next_start_code();
+//		code++;
+		//return 0;
+	}
+	flushbits(32);
+	mp4_hdr.prediction_type = getbits(2);
+	if (mp4_hdr.prediction_type == B_VOP)
+	{	
+		//mp4_hdr.last_prediction_type=mp4_hdr.prediction_type;
 		return 0;
 	}
-	mp4_hdr.prediction_type = getbits(2);
-
-	while (getbits1() == 1) // temporal time base
-	{
-		mp4_hdr.time_base++;
-	}
+	while (getbits1() == 1); // temporal time base
+//	{
+//		mp4_hdr.time_base++;
+//	}
 	flushbits(1); // marker bit
 	{
 		int bits = (int) ceil(log(mp4_hdr.time_increment_resolution)/log(2.0));
 		if (bits < 1) bits = 1;
-		
-		mp4_hdr.time_inc = getbits(bits); // vop_time_increment (1-16 bits)
+		flushbits(bits+1);
 	}
-
-	flushbits(1); // marker bit
+	//mp4_hdr.time_inc = getbits(bits); // vop_time_increment (1-16 bits)
+	
+//	flushbits(1); // marker bit
 	mp4_hdr.vop_coded = getbits1();
 	if (mp4_hdr.vop_coded == 0) 
 	{
@@ -140,16 +155,15 @@ int getvophdr()
 	{
 		mp4_hdr.fcode_for = getbits(3); 
 	}
-		
-	if (! mp4_hdr.scalability) {
-		if (mp4_hdr.shape && mp4_hdr.prediction_type!=I_VOP)
-			flushbits(1); // vop shape coding type
+	
+//	if (! mp4_hdr.scalability) {
+//		if (mp4_hdr.shape && mp4_hdr.prediction_type!=I_VOP)
+//			flushbits(1); // vop shape coding type
 			/* motion_shape_texture() */
-	}
+//	}
 	
 	return 1;
 }
-
 // Purpose: look nbit forward for an alignement
 int bytealigned(int nbit) 
 {

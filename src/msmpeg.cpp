@@ -22,7 +22,7 @@ extern int decore_length;
 
 int decore_init_Div3(int hor_size, int ver_size, unsigned long color_depth, int output_format);
 int decore_release_Div3();
-void decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra);
+int decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra);
 
 /***/
 
@@ -67,7 +67,7 @@ int decore_Div3(unsigned long handle, unsigned long dec_opt,
 
 /***/
 
-void decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra)
+int decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra)
 {
     avcodec_decode_video(c, &picture, &got_picture, 
                                stream, 48000,bmp,render_flag,Extra);

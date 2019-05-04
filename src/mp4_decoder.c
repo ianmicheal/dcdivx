@@ -34,16 +34,16 @@ void initdecoder ()
 	char * BigBuff;
 	if (!tempBB)
 	{
-		BigBuff=tempBB=(char*)malloc(600 * 600* 3);// lum_width*lum_height*2 + chrom_width*chrom_height*4 (=lum_width*lum_height)
+		BigBuff=tempBB=(char*)malloc(656 * 512* 3);// lum_width*lum_height*2 + chrom_width*chrom_height*4 (=lum_width*lum_height)
 	//		BigBuff=tempBB=(char*)ta_txr_map(ta_txr_allocate(600 * 600* 3));// lum_width*lum_height*2 + chrom_width*chrom_height*4 (=lum_width*lum_height)
 	}
 	else
 	{
 		BigBuff=tempBB;
 	}
-
 //	char * BigBuff=tempBB=(char*)malloc(coded_picture_width * coded_picture_height*3);// lum_width*lum_height*2 + chrom_width*chrom_height*4 (=lum_width*lum_height)
 	// dc prediction border 
+	//coeff_pred->ac_dc_left_lum=coeff_pred->ac_dc_left_lum1;
 	memset(BigBuff,0,coded_picture_width * coded_picture_height*5);
 	for (i = 0; i < 64/*(2*MBC+1)*/; i++)
 		coeff_pred->ac_dc_left_lum[0][i][0] = 1024;

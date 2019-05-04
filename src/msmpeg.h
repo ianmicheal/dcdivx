@@ -53,7 +53,7 @@ typedef struct _DEC_SET_
 **/
 // the prototype of the decore() - main decore engine entrance
 //
-void decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp,int flag, int Extra);
+int decore_frame_Div3(unsigned char *stream, int length, unsigned char *bmp,int flag, int Extra);
 //int decore_dropframe(unsigned char *stream, int length, unsigned char *bmp);
 
 int decore_Div3(

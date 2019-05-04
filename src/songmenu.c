@@ -79,7 +79,7 @@ static void load_song_list() {
 
 /* Draws the song listing */
 static void draw_listing() {
-	float y = 100.0f;
+	float y = 110.0f;
 	int i, esel;
 
 	/* Draw all the song titles */	
@@ -97,8 +97,8 @@ static void draw_listing() {
 	
 	/* Put a highlight bar under one of them */
 	esel = (selected - top);
-	draw_poly_box(60.0f, 100.0f+esel*24.0f - 1.0f,
-		570.0f, 100.0f+esel*24.0f + 25.0f, 95.0f,
+	draw_poly_box(60.0f, 110.0f+esel*24.0f - 1.0f,
+		570.0f, 110.0f+esel*24.0f + 25.0f, 95.0f,
 		throb, 0.2f, 0.2f, throb, throb, 0.2f, 0.2f, throb);
 }
 
@@ -284,13 +284,15 @@ void check_inputs() {
 
 /* Main rendering of the song menu */
 void song_menu_render() {
+	static int last=0;
 	/* Draw a background box */
 //	draw_poly_box(30.0f, 70.0f, 610.0f, 430.0f, 90.0f, 
 //		0.0f, 0.8f, 0.2f, 0.8f, 0.2f, 0.2f, 0.8f, 5.0f);
 	/* If we don't have a file listing, get it now */
 	if (num_entries == 0) {
+		last=0;
 		if (load_queued < 4) {
-			draw_poly_strf(60.0f, 100.0f, 100.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+			draw_poly_strf(60.0f, 110.0f, 100.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 				"Scanning Directory...");
 			load_queued++;
 			return;
@@ -299,7 +301,11 @@ void song_menu_render() {
 			load_queued = 0;
 		}
 	}
-	
+	else
+	{
+		if (last==0) bkg_setup();
+		last=1;
+	}
 	/* Draw the song listing */
 	draw_listing();
 	

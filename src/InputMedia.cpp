@@ -61,7 +61,7 @@ void Restart(int pos)
 	BufferStartNext=pos;
 	WritePos=0;
 	maxread=200000;
-	while(WritePos<CACHE_SIZE-600000&&(WritePos+BufferStartNext<fSize)) ReadAhead();
+	while(WritePos<CACHE_SIZE-1100000&&(WritePos+BufferStartNext<fSize)) ReadAhead();
 	maxread=30000;
 }
 
@@ -77,11 +77,11 @@ void ReadAhead()
 		{
 			return;
 		}
-		if (lastReadPos-(WritePos+BufferStart)<500000&&(lastReadPos>(WritePos+BufferStart))&&(BufferStartNext>BufferStart))
+		if (lastReadPos-(WritePos+BufferStart)<1000000&&(lastReadPos>(WritePos+BufferStart))&&(BufferStartNext>BufferStart))
 		{
 			return;
 		}
-		if ((WritePos-(lastReadPos-BufferStart))>CACHE_SIZE-500000)
+		if ((WritePos-(lastReadPos-BufferStart))>CACHE_SIZE-1000000)
 		{
 			return;
 		}
@@ -133,7 +133,7 @@ int InputMediaOpen(char* lpFilename, int mode, int type, int reservesize, int ma
 		BufferStartNext=0;
 		WritePos=0;
 		maxread=200000;
-		while(WritePos<CACHE_SIZE-600000&&(WritePos<fSize)) ReadAhead();
+		while(WritePos<CACHE_SIZE-1100000&&(WritePos<fSize)) ReadAhead();
 		maxread=30000;
 
 
@@ -173,7 +173,7 @@ int InputMediaRead(char *data, unsigned int size)
 
 		while((lastReadPos+bytesleft)>(WritePos+BufferStartNext))
 		{
-			printf("caught up\r\n");
+		//	printf("caught up\r\n");
 			ReadAhead();
 		}
 		
@@ -236,7 +236,7 @@ int InputMediaSeek(int size, unsigned int method)
 
 		if (size-BufferStart<WritePos+100000&& (BufferStartNext!=BufferStart))
 		{
-		//	printf("BufferStart=%d BufferNext=%d WriteBos=%d \r\n",BufferStart, BufferStartNext,WritePos);
+			printf("BufferStart=%d BufferNext=%d WriteBos=%d \r\n",BufferStart, BufferStartNext,WritePos);
 			Restart(size);
 
 		}

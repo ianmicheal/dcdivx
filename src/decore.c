@@ -31,7 +31,7 @@ extern unsigned char *decore_stream;
 extern int Dither;
 int decore_init(int hor_size, int ver_size, unsigned long color_depth, int output_format);
 int decore_release();
-void decore_frame(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra);
+int decore_frame(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra);
 int decore_setoutput(unsigned long color_depth, int output_format);
 
 /**/
@@ -106,14 +106,15 @@ int decore_init(int hor_size, int ver_size, unsigned long color_depth, int outpu
 
 /**/
 
-void decore_frame(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra)
+int decore_frame(unsigned char *stream, int length, unsigned char *bmp, int render_flag, int Extra)
 {
 	decore_stream = stream;
 	initbits ();
 	getvolhdr();
-	getvophdr(); // read vop header
+	if (!getvophdr()) return 0;; // read vop header
 	get_mp4picture (bmp, render_flag,Extra); // decode vop
 	mp4_hdr.picnum++;
+	return 1;
 }
 
 /**/

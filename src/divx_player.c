@@ -93,12 +93,11 @@ int main(int argc, char **argv) {
 	int i=0;
 	/* Do basic setup */
 	kos_init_all(IRQ_ENABLE | THD_ENABLE | TA_ENABLE, romdisk);
-	//vid_init(DM_640x480,  PM_RGB888);
+	vid_init(DM_640x480,  PM_RGB565);
 	/* Setup the mouse/font texture */
 	setup_util_texture();
-
-	/* Setup background display */
 	bkg_setup();
+	/* Setup background display */
 
 	/* Find a mouse if there is one */
 	//mmouse = maple_first_mouse();
