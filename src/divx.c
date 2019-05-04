@@ -51,7 +51,7 @@ void stream_pause();
 extern int bPause;
 mad_fixed_t left_err=0, right_err=0;
 reader RD;
-#define MP3_BUFFER_SIZE 32768
+#define MP3_BUFFER_SIZE 4096 //32768
 char* mp3_buffer=NULL; 
 int Freq,ch,br,played,pos;
 int jtot;
@@ -79,6 +79,18 @@ static void* get_data(int req_size,int curbuffer) ;
 
 extern unsigned char *decore_stream;
 extern int decore_length;
+
+void SeekStart_OGG();
+void SeekEnd_OGG();
+void Init_OGG(int Equalizer,char* eq);
+void Exit_OGG(void);
+int GetHeaderInfo_OGG(unsigned char * inbuff, int insize, int* Freq, int* ch, int* BitRate);
+int DecompressAudio_OGG(unsigned char * inbuff, int bytes, char *outmemory, int outmemsize, int *done, int* inputpos);
+
+int decore_vp3(unsigned long handle, unsigned long dec_opt,
+	void *param1, void *param2);
+
+int decore_frame_vp3(unsigned char *stream, int length, unsigned char *bmp, int render_flag);
 
 int decore_Div3(unsigned long handle, unsigned long dec_opt,
 	void *param1, void *param2)
@@ -251,8 +263,9 @@ unsigned int pack_pcm(unsigned char *data, unsigned int nsamples,
   return data - start;
 }
 
+
 // This is an example of an exported function.
-void Init(int Equalizer,char* eq)
+void Init_MP3(int Equalizer,char* eq)
 {
 	if (begin)
 	{
@@ -270,7 +283,7 @@ void Init(int Equalizer,char* eq)
 
 }
 // This is an example of an exported function.
-void Exit(void)
+void Exit_MP3(void)
 {
   mad_frame_finish(&frame);
 
@@ -279,19 +292,27 @@ void Exit(void)
 	begin=1;
 }
 
-int GetHeaderInfo(unsigned char * inbuff, int insize, int* Freq, int* ch, int* BitRate)
+int GetHeaderInfo_MP3(unsigned char * inbuff, int insize, int* Freq, int* ch, int* BitRate)
 {
    	  mad_stream_buffer(&stream, (const unsigned char *)inbuff, insize);
-	  while (mad_frame_decode(&frame, &stream) == -1);
+	  while (mad_frame_decode(&frame, &stream) == -1)
+	  {
+		if (stream.error == MAD_ERROR_BUFLEN)
+		{
+
+			framepos=(int)(stream.this_frame-stream.buffer);
+			return stream.bufend - stream.this_frame+1;
+		}
+	  }
   	*Freq=frame.header.samplerate;
 	  *BitRate=frame.header.bitrate;
 	  *ch=(frame.header.mode > 0) ? 2 : 1;
-		Exit();
-		Init(0,0);
-	  return 1;
+		Exit_MP3();
+		Init_MP3(0,0);
+	  return 0;
 }
 
-int DecompressMp3(unsigned char * inbuff, int insize, char *outmemory, int outmemsize, int *done, int* inputpos)
+int DecompressAudio_MP3(unsigned char * inbuff, int insize, char *outmemory, int outmemsize, int *done, int* inputpos)
 {
 
 	int retval=0;
@@ -347,6 +368,10 @@ int DecompressMp3(unsigned char * inbuff, int insize, char *outmemory, int outme
 	return retval;    
 }
 
+int (*DecompressAudio)(unsigned char * inbuff, int insize, char *outmemory, int outmemsize, int *done, int* inputpos);
+void (*Init) (int Equalizer,char* eq);
+void (*Exit)(void);
+int (*GetHeaderInfo)(unsigned char * inbuff, int insize, int* Freq, int* ch, int* BitRate);
 
 long decBegin(int First)
 {
@@ -666,6 +691,7 @@ void Decode(void *v)
 	do 
 	{	
 		//printf("leftover %d bytes\r\n", status);
+		if (status==32768) status=0;
 		if (status>0) 
 		{
 			status--;
@@ -694,7 +720,9 @@ void Decode(void *v)
 		}while(written>=1000000||(FastForward));
 
 
-		status=DecompressMp3((unsigned char*) mp3_buffer,nb_read+status,buffer,4800,&played,&pos) ; 
+//		printf("Status in=%d\r\n",status);
+		status=DecompressAudio((unsigned char*) mp3_buffer,nb_read+status,buffer,4800,&played,&pos) ; 
+//		printf("Status=%d\r\n",status);
 		synchpos[writepos/BUFF_SIZE]=pos;
 		if (written>131072*ch) PlayFrame();
 
@@ -729,8 +757,8 @@ void Decode(void *v)
 							return;
 						}
 					}while(written>=1000000);
-					status=DecompressMp3(NULL,0,buffer,4800,&played,&pos) ; 
-					if (status>MP3_BUFFER_SIZE) printf("Level 2 failed");
+					status=DecompressAudio(NULL,0,buffer,4800,&played,&pos) ; 
+					//if (status>MP3_BUFFER_SIZE) printf("Level 2 failed");
 					synchpos[writepos/BUFF_SIZE]=pos;
 					if (written>131072*ch) PlayFrame();
 					totalwritten+=played;
@@ -758,10 +786,12 @@ void Decode(void *v)
 		}
     } while ((status > 0)&&(!bEnd));
 	DoneDecode=1;
+	printf("done audio\r\n");
 	while (!Finished&&(!bEnd))
 	{
 		PlayFrame();
 	}
+	printf("done all\r\n");
 }
 
 int decore_release();
@@ -770,7 +800,6 @@ void decEnd()
 {
 	decore_release();
 }
-
 
 int play_divx(char *filename)
 {
@@ -788,10 +817,26 @@ for (i=0;i<1200;i++)
 	if (strstr(filename,".mp3")||(strstr(filename,".MP3")))
 	{
 		InitializeReaderMP3(&RD);
+		DecompressAudio=DecompressAudio_MP3;
+		Init=Init_MP3;
+		Exit=Exit_MP3;
+		GetHeaderInfo=GetHeaderInfo_MP3;
+	}
+	else if (strstr(filename,".ogg")||(strstr(filename,".OGG")))
+	{
+		InitializeReaderMP3(&RD);
+		DecompressAudio=DecompressAudio_OGG;
+		Init=Init_OGG;
+		Exit=Exit_OGG;
+		GetHeaderInfo=GetHeaderInfo_OGG;
 	}
 	else
 	{
 		InitializeReaderAVI(&RD);
+		DecompressAudio=DecompressAudio_MP3;
+		Init=Init_MP3;
+		Exit=Exit_MP3;
+		GetHeaderInfo=GetHeaderInfo_MP3;
 	}
 	if (!RD.READER_Open(filename, 1,16,&vidinfo))
 	{
@@ -819,6 +864,11 @@ for (i=0;i<1200;i++)
 		decode=decore_Div3;
 		decode_frame=decore_frame_Div3;
 	}
+	else if (strstr(vidinfo->compressor,"vp31")||(strstr(vidinfo->compressor,"vp31")))
+	{
+		decode=decore_vp3;
+		decode_frame=decore_frame_vp3;
+	}
 	written=0;
 	writepos=0;
 	readpos=0;
@@ -834,7 +884,19 @@ for (i=0;i<1200;i++)
 	ReadAhead();
 	RD.READER_ReadAudio((char *)mp3_buffer,MP3_BUFFER_SIZE-1);
 	Freq=0;
-	GetHeaderInfo((unsigned char*)mp3_buffer,MP3_BUFFER_SIZE-1,&Freq,&ch,&br);
+	printf("before header\r\n");
+	while((status=GetHeaderInfo((unsigned char*)mp3_buffer,MP3_BUFFER_SIZE-1,&Freq,&ch,&br))!=0)
+	{
+		if (status==32768) status=0;
+		if (status>0) 
+		{
+			status--;
+			memmove(mp3_buffer,mp3_buffer+(MP3_BUFFER_SIZE-status),status);
+		}
+		RD.READER_ReadAudio((char *)mp3_buffer+status,MP3_BUFFER_SIZE-status);
+	}
+	printf("got past header\r\n");
+	//GetHeaderInfo((unsigned char*)mp3_buffer,MP3_BUFFER_SIZE-1,&Freq,&ch,&br);
 	memmove(mp3_buffer+1,mp3_buffer,MP3_BUFFER_SIZE-1);
 	status=MP3_BUFFER_SIZE;
 	BUFF_SIZE=Freq>22050?2304*ch:1152*ch;

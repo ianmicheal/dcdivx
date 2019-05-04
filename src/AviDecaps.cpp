@@ -341,7 +341,7 @@ int AVIDecaps_FillHeader(int getIndex)
 
 	InputMediaClose();
 	//InputMediaOpen(thisvid.m_lpFilename,INPUT_OPEN_BINARY,thisvid.m_type,2000000);
-	InputMediaOpen(thisvid.m_lpFilename, 0, 0,2000000,16);
+	InputMediaOpen(thisvid.m_lpFilename, 0, 0,2000000,1);
 	InputMediaSeek(thisvid.movi_start, 
 		INPUT_SEEK_SET);
 	
@@ -362,7 +362,7 @@ int AVIDecaps_Open(char* lpFilename, int type, int size,videoinfo** vid)
 
 	strcpy(thisvid.m_lpFilename,lpFilename);
 	thisvid.m_type=type;
-	if (!InputMediaOpen(lpFilename, 0, type,2000000,size))
+	if (!InputMediaOpen(lpFilename, 0, type,2000000,0))
 	{
 		return 0;
 	}

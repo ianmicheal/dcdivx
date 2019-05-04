@@ -119,7 +119,7 @@ static void load_song_list() {
 			else 
 			{
 				ext = (char *)(strchr(de->name, '.')+1);
-				if(!stricmp(ext,"avi")||(!stricmp(ext,"mp3"))) 
+				if(!stricmp(ext,"avi")||(!stricmp(ext,"mp3"))||(!stricmp(ext,"ogg"))) 
 				{
 					strcpy(entries[num_entries].fn, de->name);
 					entries[num_entries].size = de->size;
@@ -165,6 +165,7 @@ static void draw_listing() {
 void check_controller() {
 	char filen[256];
 	static uint8 mcont = 0;
+	int bStart;
 	static int up_moved = 0, down_moved = 0;
 	int j;
 	if (jlast==0) jlast=jiffies;
@@ -211,18 +212,21 @@ void check_controller() {
 	if (cond.rtrig > 0)
 	{
 		shuffle=1;
+		printf("Trigger\r\n");
 		load_song_list();
 		load_queued = 0;
 		jlast=jiffies;
 	}
 	if (cond.ltrig > 0)
 	{
+		printf("Trigger\r\n");
 		shuffle=0;
 		load_song_list();
 		load_queued = 0;
 		jlast=jiffies;
 	}
-	if (!(cond.buttons & CONT_A)) 
+	bStart=(!(cond.buttons & CONT_START)||(j>3000));
+	if ((!(cond.buttons & CONT_A))||(bStart))
 	{
 		poly_hdr_t poly;
 		int i=0;
@@ -246,22 +250,23 @@ void check_controller() {
 				strcpy(filen,curdir);
 				strcat(filen,"/");
 				strcat(filen,entries[selected].fn);
-
-				for (i=0;i<3;i++)
+				if (strstr(filen,".avi")||(strstr(filen,".AVI")))
 				{
-					ta_begin_render();
-					loading_render();
+					for (i=0;i<3;i++)
+					{
+						ta_begin_render();
+						loading_render();
 
-					ta_commit_eol();
-					ta_poly_hdr_col(&poly, TA_TRANSLUCENT);
-					ta_commit_poly_hdr(&poly);
-					ta_commit_eol();
-					ta_finish_frame();
+						ta_commit_eol();
+						ta_poly_hdr_col(&poly, TA_TRANSLUCENT);
+						ta_commit_poly_hdr(&poly);
+						ta_commit_eol();
+						ta_finish_frame();
+					}
 				}
 				ret=play_divx(filen);
-				if (ret==2)
+				if (ret==2||(bStart&&(ret==0)))
 				{
-					bNext=1;
 					selected++;
 					printf("Next=%d\r\n",selected);
 					while(entries[selected].size<=0||(selected>num_entries))
@@ -269,10 +274,22 @@ void check_controller() {
 						if (selected>num_entries) selected=0;
 						if (entries[selected].size<=0) selected++;
 					}
+					for (i=0;i<3;i++)
+					{
+						ta_begin_render();
+						bkg_render();
+
+						ta_commit_eol();
+
+						draw_listing();
+						ta_commit_eol();
+
+						ta_finish_frame();
+					}
+					bNext=1;
 				}
 				else if (ret==3)
 				{
-					bNext=1;
 					selected--;
 					if (selected<0) selected=num_entries-1;
 					printf("Next=%d\r\n",selected);
@@ -281,6 +298,19 @@ void check_controller() {
 						if (selected<0) selected=num_entries-1;
 						if (entries[selected].size<=0) selected--;
 					}
+					for (i=0;i<3;i++)
+					{
+						ta_begin_render();
+						bkg_render();
+
+						ta_commit_eol();
+
+						draw_listing();
+						ta_commit_eol();
+
+						ta_finish_frame();
+					}
+					bNext=1;
 				}
 				else
 				{
@@ -315,6 +345,7 @@ void check_controller() {
 			}
 			selected = top = num_entries = 0;
 			printf("current directory is now '%s'\n", curdir);
+			printf("Directory\r\n");
 			load_song_list();
 
 		}
@@ -333,17 +364,15 @@ void check_controller() {
 		jlast=jiffies;
 
 	}
-	if (!(cond.buttons & CONT_START)||(j>3000)) 
+/*	if (!(cond.buttons & CONT_START)||(j>3000)) 
 	{
 		int n;
 		int bStop=0;
  		poly_hdr_t poly;
 		//mouse_render();
 
-		/* End of translucent list */
 		ta_commit_eol();
 
-		/* Finish the frame *******************************/
 		ta_finish_frame();
 		for (n=selected;n<num_entries&&(!bStop);n++)
 		{
@@ -353,16 +382,20 @@ void check_controller() {
 				strcpy(filen,curdir);
 				strcat(filen,"/");
 				strcat(filen,entries[n].fn);
-				for (i=0;i<3;i++)
+				if (strstr(filen,".avi")||(strstr(filen,".AVI")))
 				{
-					ta_begin_render();
-					loading_render();
+					for (i=0;i<3;i++)
+					{
+						ta_begin_render();
+						bkg_render();
 
-					ta_commit_eol();
-					ta_poly_hdr_col(&poly, TA_TRANSLUCENT);
-					ta_commit_poly_hdr(&poly);
-					ta_commit_eol();
-					ta_finish_frame();
+						ta_commit_eol();
+
+						song_menu_render();
+						ta_commit_eol();
+
+						ta_finish_frame();
+					}
 				}
 				bStop=(play_divx(filen)==-2);
 			}
@@ -370,13 +403,11 @@ void check_controller() {
 		selected=0;
 //		ta_begin_render();
 
-		/* Opaque list *************************************/
 //		bkg_render();
 
-		/* End of opaque list */
 //		ta_commit_eol();
 		jlast=jiffies;
-	}
+	}*/
 }
 
 /* Check maple bus inputs */
@@ -400,6 +431,7 @@ void song_menu_render() {
 			jlast=jiffies;
 			return;
 		} else {
+			printf("No Entries\r\n");
 			load_song_list();
 			load_queued = 0;
 		}

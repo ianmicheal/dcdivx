@@ -70,7 +70,7 @@ int MP3Reader_FillHeader(int getIndex)
 int MP3Reader_Open(char* lpFilename, int type, int maxsize,videoinfo** vid)
 {
 
-	mpsvid.audio_bytes=InputMediaOpen(lpFilename, 0, type,1000000, maxsize);
+	mpsvid.audio_bytes=InputMediaOpen(lpFilename, 0, type,1000000, 0);
 	if (!mpsvid.audio_bytes) 
 	{
 		return 0;

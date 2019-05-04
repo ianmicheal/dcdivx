@@ -28,21 +28,21 @@ void loading_setup() {
 
     if (!lchktexture)
 	{
-		lchktexture = ta_txr_allocate(512*512*2);
-		jpeg_to_texture("/rd/loading.jpg", lchktexture, 512,1);
+		lchktexture = ta_txr_allocate(256*256*2);
+		jpeg_to_texture("/rd/loading.jpg", lchktexture, 256,1);
 	}
     if ((infile = fs_open("/cd/loading.jpg", O_RDONLY)) == 0) {
 		return;
     }
 	fs_close(infile);
-    jpeg_to_texture("/cd/loading.jpg", lchktexture, 512,1);
+    jpeg_to_texture("/cd/loading.jpg", lchktexture, 256,1);
 }
 
 void loading_render() {
     poly_hdr_t poly;
     vertex_ot_t vert;
 
-    ta_poly_hdr_txr(&poly, TA_OPAQUE, TA_RGB565_TWID, 512, 512, lchktexture, TA_NO_FILTER);
+    ta_poly_hdr_txr(&poly, TA_OPAQUE, TA_RGB565_TWID, 256, 256, lchktexture, TA_NO_FILTER);
     ta_commit_poly_hdr(&poly);
     
     vert.r = vert.g = vert.b = 1.0f;

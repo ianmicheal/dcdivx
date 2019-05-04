@@ -133,7 +133,16 @@ int InputMediaOpen(char* lpFilename, int mode, int type, int reservesize, int ma
 		BufferStartNext=0;
 		WritePos=0;
 		maxread=200000;
-		while(WritePos<CACHE_SIZE-1100000&&(WritePos<fSize)) ReadAhead();
+		if (maxsize)
+		{
+			//
+			while(WritePos<CACHE_SIZE-1100000&&(WritePos<fSize)) ReadAhead();
+		}
+		else
+		{
+			//CACHE_SIZE-1100000
+			while(WritePos<400000&&(WritePos<fSize)) ReadAhead();
+		}
 		maxread=30000;
 
 

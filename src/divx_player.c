@@ -173,6 +173,7 @@ int main(int argc, char **argv) {
 	/* Do basic setup */
 	kos_init_all(IRQ_ENABLE | THD_ENABLE | TA_ENABLE, romdisk);
 	vid_init(DM_640x480,  PM_RGB565);
+//	vid_init(DM_640x480_PAL_IL,  PM_RGB565);
 	/* Setup the mouse/font texture */
 	setup_util_texture();
 	bkg_setup();
