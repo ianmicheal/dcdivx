@@ -1,0 +1,21 @@
+The DCDivx and PocketDivx players are released as a free openSource Projects under the GPL License.  The terms of this license
+can be found in in GPL.txt.
+
+These players include other GPL software from the following products:
+
+MAD MP3 decoder - thanks much to Rob Leslie for the best MP3 decoder I have used.
+FFMPEG - from which we use pieces of code to accomplish mpeg-1 and Divx 3.x decoding.
+OpenDivx - from which our Divx decoder is derived
+
+While we have optimized the above projects for DreamCast and PocketPC we give full credit to the hard work that the people
+behind those projects put in to make theirs and our projects possible.
+
+
+Contributors:
+
+Marc Dukette - I just try to keep the ball rolling.
+Pedro Mateu - Miracle man that he is. Without Pedro none of this would be possible.
+Jacob Alberty - Gave me the kick start and resources I needed to make the Dreamcast port happen.
+VILLANI Alexandre - who gave us permission to use his logo for the player 
+Cameron -  who is doing our BE300 kits.
+Pete	- for the DCDivx UI. 
